@@ -12,6 +12,8 @@ PKG_RELEASE:=4
 ifeq ($(ARCH),x86_64)
   USQUE_ARCH:=amd64
   USQUE_HASH:=4117e20695078af9c11edecd1a826c009bbc7ea0b7f64458612b4198910bc313
+else ifeq ($(ARCH),i386)
+  USQUE_ARCH:=386
 else ifeq ($(ARCH),aarch64)
   USQUE_ARCH:=arm64
   USQUE_HASH:=c88b061c2a567f30813d7505637d1fb6fe7ec5898b5b61fd05122409fa5ad925
@@ -40,12 +42,14 @@ else ifeq ($(ARCH),mips64el)
   USQUE_HASH:=20b3fa8ab1f7cc5dd99ea9106deddbd6c52a5bbe89385bcf21b090f4aad4ccd8
 endif
 
-PKG_SOURCE:=usque_$(PKG_VERSION)_linux_$(USQUE_ARCH).zip
-# 第二行是传输兜底：CI 里同一份资产被并发下载时 GitHub 会返回 403/404，
-# 镜像只负责搬运，完整性仍由 PKG_HASH 校验。
-PKG_SOURCE_URL:=https://github.com/Diniboy1123/usque/releases/download/v$(PKG_VERSION)/ \
+ifeq ($(ARCH),i386)
+  PKG_SOURCE:=
+else
+  PKG_SOURCE:=usque_$(PKG_VERSION)_linux_$(USQUE_ARCH).zip
+  PKG_SOURCE_URL:=https://github.com/Diniboy1123/usque/releases/download/v$(PKG_VERSION)/ \
 	https://ghfast.top/https://github.com/Diniboy1123/usque/releases/download/v$(PKG_VERSION)/
-PKG_HASH:=$(USQUE_HASH)
+  PKG_HASH:=$(USQUE_HASH)
+endif
 
 PKG_LICENSE:=MIT GPL-3.0-only
 PKG_LICENSE_FILES:=LICENSE.md LICENSE.runtime
@@ -59,7 +63,7 @@ define Package/usque
   SUBMENU:=Web Servers/Proxies
   TITLE:=Cloudflare WARP MASQUE client
   URL:=https://github.com/Diniboy1123/usque
-  DEPENDS:=@(x86_64||aarch64||arm||mips||mipsel||mips64||mips64el) +kmod-tun +ip-full +ca-bundle +jsonfilter +firewall4 +curl +flock +ubus +coreutils-timeout
+  DEPENDS:=@(TARGET_x86||aarch64||arm||mips||mipsel||mips64||mips64el) +kmod-tun +ip-full +ca-bundle +jsonfilter +firewall4 +curl +flock +ubus +coreutils-timeout
 endef
 
 define Package/usque/description
@@ -73,11 +77,22 @@ define Package/usque/conffiles
 /etc/usque/config.json
 endef
 
+ifeq ($(ARCH),i386)
+define Build/Prepare
+	mkdir -p $(PKG_BUILD_DIR)
+	test -x $(CURDIR)/files/usque
+	test -f $(CURDIR)/files/LICENSE.md
+	$(CP) $(CURDIR)/files/usque $(PKG_BUILD_DIR)/usque
+	$(CP) $(CURDIR)/files/LICENSE.md $(PKG_BUILD_DIR)/LICENSE.md
+	$(CP) $(CURDIR)/LICENSE $(PKG_BUILD_DIR)/LICENSE.runtime
+endef
+else
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
 	unzip -q -o -d $(PKG_BUILD_DIR) $(DL_DIR)/$(PKG_SOURCE)
 	$(CP) $(CURDIR)/LICENSE $(PKG_BUILD_DIR)/LICENSE.runtime
 endef
+endif
 
 define Build/Compile
 endef
