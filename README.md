@@ -1,6 +1,9 @@
 <p align="center"><img src="https://raw.githubusercontent.com/kenzok8/kenzok8/main/screenshot/usque/usque-logo.png" width="88" height="88" alt="Usque"></p>
 <h1 align="center">Usque for OpenWrt</h1>
 <p align="center">看清 WARP 连接，掌握流量去向。</p>
+
+<p align="center"><a href="README_en.md">English</a> · 中文</p>
+
 <p align="center">
 <a href="https://github.com/kenzok8/openwrt-usque/releases"><img alt="Release" src="https://img.shields.io/github/v/release/kenzok8/openwrt-usque?include_prereleases&color=a74414"></a>
 <a href="https://github.com/kenzok8/openwrt-usque/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/kenzok8/openwrt-usque/total"></a>
@@ -12,6 +15,8 @@
 </p>
 
 [Usque](https://github.com/Diniboy1123/usque) 通过 MASQUE 连接 Cloudflare WARP。本项目提供 OpenWrt 软件包、原生 LuCI 控制台、账号管理和 TUN 路由管理，上游核心保持 `v4.2.1`，不修改核心代码。
+
+正式版已发布：[v2026.11.09](https://github.com/kenzok8/openwrt-usque/releases/tag/v2026.11.09) 与 [v2026.11.09-r2](https://github.com/kenzok8/openwrt-usque/releases/tag/v2026.11.09-r2)。使用指南见[文档站](https://kenzok8.github.io/openwrt-usque/)。
 
 ## 这是什么
 
@@ -34,11 +39,14 @@
 2. 选模式：SOCKS5 用默认 `127.0.0.1:1080`；想整台设备走就选 TUN 并指定 LAN 设备（默认已填）。
 3. 勾 **启用并开机自启** → 保存并应用 → 点 **检测连接**，看到 `warp=on` 才算真通。
 
-### 关于注册
+<details>
+<summary><b>关于注册</b></summary>
 
 点击注册时，插件会调用 Cloudflare 的免费设备注册接口，拿回一组设备凭据（设备 ID、私钥、令牌、端点），存到 `/etc/usque/config.json`。它不是你 Cloudflare 账号下的一台机器，所以在 Cloudflare 仪表盘里看不到，也删不掉；想换身份就是重新注册，新凭据覆盖旧的。这一档是免费 WARP，不是 WARP+。
 
 同一宽带短时间反复注册会被限速，表现为注册失败。插件失败时会保留旧账号，等一会儿再试，别连点。
+
+</details>
 
 ### 两个容易踩的坑
 
@@ -47,13 +55,13 @@
 
 ## 接入点
 
-默认用账户里记录的 Cloudflare WARP 入口。入口 IP 被线路封掉时（常见现象是检测全红、但其他网站正常），在设置页把 `接入点地址` 换成同段的其他入口即可，账户文件不会被改动。
+默认用账户里记录的 Cloudflare WARP 入口。入口 IP 被线路封掉时（常见现象是检测全红、但其他网站正常），在设置页的接入点下拉里选另一个预设入口即可，账户文件不会被改动。
+
+预设入口：`162.159.198.1`、`162.159.198.2`、`162.159.198.3`、`162.159.192.1`、`162.159.193.1`、`162.159.195.1`、`162.159.204.1`。
 
 实测：`162.159.198.2` 被封时，`162.159.198.1` 可以正常建隧道。
 
-## 当前状态与设计要点
-
-**当前为待发布源码。** 工作流和文档站部署配置已准备，公开仓库、下载地址及 Pages 需发布后生效。SDK 构建成功不代表所有设备均已通过运行验收。
+## 设计要点
 
 - **两种使用方式**：SOCKS5 供主动使用代理的应用接入，TUN 可接管指定 LAN 的 IPv4。
 - **状态讲清楚**：账号、进程和路由分开显示；连接检测分三条路径（WARP 本身、境外站点、境内站点）给出延迟和信号格，一次成功不代表长期稳定。
@@ -78,46 +86,60 @@
 </table>
 </details>
 
-截图取自实际运行的 LuCI 页面，不代表已完成 SDK 打包验收。
-
 ## 安装与构建
 
-| 固件 | 包格式 | 首轮 SDK 构建矩阵 |
+| 固件 | 包格式 | 构建矩阵 |
 | --- | --- | --- |
 | OpenWrt / ImmortalWrt 24.10 | IPK | x86_64、AArch64 四类、ARMv7 两类 |
 | OpenWrt / ImmortalWrt 25.12 | APK | 同上 |
 
-AArch64 包架构为 `aarch64_generic`、`aarch64_cortex-a53`、`aarch64_cortex-a72`、`aarch64_cortex-a76`；ARMv7 为 `arm_cortex-a7_neon-vfpv4`、`arm_cortex-a9`。ARM 根据 CPU 选择上游 armv5/v6/v7 程序。MIPS 映射保留，但浮点 ABI 和设备运行尚未验收，不在首轮支持承诺内。
+AArch64 包架构为 `aarch64_generic`、`aarch64_cortex-a53`、`aarch64_cortex-a72`、`aarch64_cortex-a76`；ARMv7 为 `arm_cortex-a7_neon-vfpv4`、`arm_cortex-a9`。ARM 根据 CPU 选择上游 armv5/v6/v7 程序。MIPS 映射保留在 Makefile 里，但不在构建矩阵内，浮点 ABI 和设备运行尚未验收。
 
-在 OpenWrt SDK 中把本仓库作为 feed，安装并编译 `usque` 与 `luci-app-usque`。也可以使用仓库的 `Build OpenWrt packages` 工作流；它只保存带 `SHA256SUMS` 的构建 artifacts，不发布、不签发软件源。
-
-公开构建产物可用后，先选择匹配的 SDK 和架构，下载两个软件包及 `SHA256SUMS`，执行：
+从 [Releases](https://github.com/kenzok8/openwrt-usque/releases) 按固件与架构下载 `usque` 与 `luci-app-usque` 两个包（`luci-app-usque` 是通用包，不分架构）及对应校验文件，安装前校验：
 
 ```sh
-sha256sum -c SHA256SUMS
+sha256sum -c SHA256SUMS-24.10  # OpenWrt 24.10
+sha256sum -c SHA256SUMS-25.12  # OpenWrt 25.12
 ```
 
-再通过 LuCI 软件包页面或固件包管理器安装。不要混装 IPK、APK 或其他架构的包。包依赖包含 TUN、`ip-full`、`flock`、`curl`、`coreutils-timeout`、`firewall4`，应从与当前内核匹配的固件源安装。
+再通过 LuCI 软件包页面或固件包管理器安装。不要混装 IPK、APK 或其他架构的包。依赖应从与当前内核匹配的固件源安装，见下。
 
-## 快速开始
+也可以在 OpenWrt SDK 中把本仓库作为 feed，安装并编译 `usque` 与 `luci-app-usque`；或用仓库的 `Build OpenWrt packages` 工作流，它只保存带 `SHA256SUMS` 的构建 artifacts，不发布、不签发软件源。
 
-1. 打开 **服务 → Usque**，保存并应用注册设备名。
-2. 点击 **注册账号**，确认 Cloudflare 条款。替换账号会再次确认，失败保留现有账号。
-3. 默认选择 SOCKS5、`127.0.0.1:1080`。勾选启用并保存、应用。
-4. 点击 **检测连接**。`WARP 已验证` 只表示该次 HTTPS 请求得到 `warp=on/plus`，不是持续联网保证。
+## 依赖
+
+| 包名 | 说明 |
+| :--- | :--- |
+| `kmod-tun` | TUN 设备 |
+| `ip-full` | 完整版 iproute2，策略路由与规则管理 |
+| `ca-bundle` | CA 证书包，curl 访问 Cloudflare HTTPS 用 |
+| `jsonfilter` | 解析注册返回与 ubus 输出的 JSON |
+| `firewall4` | nftables 防火墙规则 |
+| `curl` | 注册与连接检测的 HTTPS 请求 |
+| `flock` | 注册串行锁 |
+| `ubus` | 查服务状态与网络接口 |
+| `coreutils-timeout` | 注册超时控制 |
+| `luci-base` | LuCI 运行依赖（`luci-app-usque`） |
+
+完整依赖见 `usque/Makefile` 与 `luci-app-usque/Makefile`。
+
+## 使用
 
 账号保存在 `/etc/usque/config.json`，目录权限 `700`、文件 `600`。状态与检测接口不返回账号私钥、令牌或完整配置；不要把该文件放进公开 issue。卸载保留配置的具体行为取决于包管理器，操作前自行安全备份。
 
-### TUN 的流量范围
+<details>
+<summary><b>TUN 的流量范围</b></summary>
 
 - 选择未被其他网络占用的 TUN 名称，LAN 设备应属于防火墙 `lan` 区域，默认 `br-lan`。
 - 开启 LAN 接管后，只处理指定设备转发的 IPv4。私网、组播及 WARP 端点保留原路径。
 - **IPv6 不变**；不勾选 DNS 选项时路由器 DNS 也不变。
-- 勾选 **局域网 DNS 走隧道** 后，所选设备的 DNS 改由隧道内解析器（`1.1.1.1`）处理，其他客户端和路由器自身 DNS 不受影响。这是临时改写查询目的端口实现的，不改系统原有的 DNS 劫持规则，停止后自动恢复。
+- 勾选 **局域网 DNS 走隧道** 后，所选设备的 DNS 改由隧道内解析器（`1.1.1.1` / `1.0.0.1`）处理，其他客户端和路由器自身 DNS 不受影响。这是临时改写查询目的端口实现的，不改系统原有的 DNS 劫持规则，停止后自动恢复。
 - 不应把它当作全协议、全设备 VPN。
 - 不修改路由器主默认路由。独立表 `257`、标记 `0x7573`、优先级 `25700/25701` 被其他程序占用时拒绝接管。
 - 启用期间，TUN 消失时保留阻断路由，被接管的 IPv4 等待重连；**停止 Usque 后恢复原路径**。
 - 手动停止不改变开机设置。取消启用并保存、应用，才会关闭开机启动。
+
+</details>
 
 ## 校验与排障
 
@@ -142,9 +164,10 @@ logread -e usque
 ## 维护与文档
 
 - `.github/workflows/build.yml`：两类 SDK、七架构打包与产物检查。
+- `.github/workflows/release.yml`：打 `v*` tag 后跑完整矩阵，出草稿 Release，维护者补齐说明后发布。
 - `.github/workflows/upstream.yml`：检查上游稳定版，生成待审阅候选，不自动改主线或发布。
 - `.github/dependabot.yml`：每周检查 GitHub Actions 依赖。
-- `.github/workflows/docs.yml`：从包元数据生成使用指南，部署需先启用 Pages。
+- `.github/workflows/docs.yml`：从包元数据生成使用指南，部署到 [GitHub Pages](https://kenzok8.github.io/openwrt-usque/)。
 
 本地构建文档：`python3 scripts/build-docs.py`，输出到 `artifacts/docs/`。文档站是轻量静态指南，包含搜索、深浅色、手机导航和 404 页面。
 
